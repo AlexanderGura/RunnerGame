@@ -14,7 +14,7 @@ def obstacle_movement(obstacle_list):
 	'''Movement of the obstacles.'''
 	if obstacle_list:
 		for obstacle_rect in obstacle_list:
-			obstacle_rect.x -= 5
+			obstacle_rect.x -= 4.5
 
 			if obstacle_rect.bottom == 300:
 				screen.blit(snail_surf, obstacle_rect)
@@ -33,6 +33,20 @@ def collisions(player_rect, obstacles):
 				return False
 	return True
 
+def player_animation():
+	global player_surf, player_index
+
+	# Play jumping animation when player not on the floor;
+	if player_rect.bottom < 300:
+		player_surf = player_jump
+
+	# Play walking animation when player on the floor;
+	else:
+		player_index += 0.1
+		if player_index >= len(player_walk):
+			player_index = 0
+		player_surf = player_walk[int(player_index)]
+
 pygame.init()
 pygame.display.set_caption("Runner")
 screen = pygame.display.set_mode((800, 400))		# Create the window;
@@ -45,16 +59,40 @@ start_time = 0
 sky_surf = pygame.image.load("graphics/Sky.png").convert()
 ground_surf = pygame.image.load("graphics/Ground.png").convert()
 
-# Obstacles;
-snail_surf = pygame.image.load("graphics/snail/snail1.png").convert_alpha()
-fly_surf = pygame.image.load("graphics/Fly/Fly1.png").convert_alpha()
+# Snail;
+snail_surf_1 = pygame.image.load("graphics/snail/snail1.png").convert_alpha()
+snail_surf_2 = pygame.image.load("graphics/snail/snail2.png").convert_alpha()
+snail_frames = [snail_surf_1, snail_surf_2]
+snail_index = 0
+snail_surf = snail_frames[snail_index]
+
+# Fly;
+fly_surf_1 = pygame.image.load("graphics/Fly/Fly1.png").convert_alpha()
+fly_surf_2 = pygame.image.load("graphics/Fly/Fly2.png").convert_alpha()
+fly_frames = [fly_surf_1, fly_surf_2]
+fly_index = 0
+fly_surf = fly_frames[fly_index]
 
 obstacle_rect_list = []
 
+# Timers;
 obstacle_timer = pygame.USEREVENT + 1
 pygame.time.set_timer(obstacle_timer, 1500)
 
-player_surf = pygame.image.load("graphics/Player/player_walk_1.png").convert_alpha()
+snail_animation_timer = pygame.USEREVENT + 2
+pygame.time.set_timer(snail_animation_timer, 500)
+
+fly_animation_timer = pygame.USEREVENT + 3
+pygame.time.set_timer(fly_animation_timer, 200)
+
+# Player surfaces;
+player_walk_1 = pygame.image.load("graphics/Player/player_walk_1.png").convert_alpha()
+player_walk_2 = pygame.image.load("graphics/Player/player_walk_2.png").convert_alpha()
+player_jump = pygame.image.load("graphics/Player/jump.png").convert_alpha()
+player_walk = [player_walk_1, player_walk_2]
+player_index = 0
+
+player_surf = player_walk[player_index]
 player_rect = player_surf.get_rect(midbottom = (50, 300))
 player_gravity = 0
 score = 0
@@ -89,18 +127,33 @@ while True:
 			if event.type == pygame.KEYDOWN:
 				if event.key == pygame.K_SPACE and player_rect.bottom >= 300:
 					player_gravity = -20
+
+			# Timer to append a obstacle;
+			if event.type == obstacle_timer:
+				if randint(0, 2):
+					obstacle_rect_list.append(snail_surf.get_rect(
+						midbottom = (randint(900, 1100), 300)))
+				else:
+					obstacle_rect_list.append(fly_surf.get_rect(
+						midbottom = (randint(900, 1100), 200)))
+
+			# Timer to animation of snails;
+			if event.type == snail_animation_timer:
+				snail_index = 1 if (snail_index == 0) else 0
+				snail_surf = snail_frames[snail_index]
+
+			# Timer to animation of flies;
+			if event.type == fly_animation_timer:
+				fly_index = 1 if (fly_index == 0) else 0
+				fly_surf = fly_frames[fly_index]
+
+
 		else:
 			if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
 				game_active = True
 				start_time = pygame.time.get_ticks() // 1000
 
-		if event.type == obstacle_timer and game_active:
-			if randint(0, 2):
-				obstacle_rect_list.append(snail_surf.get_rect(
-					midbottom = (randint(900, 1100), 300)))
-			else:
-				obstacle_rect_list.append(fly_surf.get_rect(
-					midbottom = (randint(900, 1100), 200)))
+
 
 	if game_active:
 		screen.blit(sky_surf, (0, 0))		# Draw sky on the window;
@@ -114,6 +167,7 @@ while True:
 		player_rect.y += player_gravity
 		if player_rect.bottom >= 300:
 			player_rect.bottom = 300
+		player_animation()
 		screen.blit(player_surf, player_rect)
 
 		# Obstacles;
